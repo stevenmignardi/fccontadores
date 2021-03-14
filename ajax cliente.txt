@@ -1,0 +1,157 @@
+<?php 
+
+session_start();
+require_once "../modelos/clientes.php";
+
+$cliente = new Cliente();
+
+$idclientec = isset($_POST["idclientec"])? limpiarCadena($_POST["idclientec"]):"";
+$clavec = isset($_POST["clavec"])? limpiarCadena($_POST["clavec"]):"";
+$idcliente=isset($_POST["idcliente"])? limpiarCadena($_POST["idcliente"]):"";
+$ruc = isset($_POST["ruc"])? limpiarCadena($_POST["ruc"]):"";
+$razonsocial = isset($_POST["razonsocial"])? limpiarCadena($_POST["razonsocial"]):"";
+$direccion = isset($_POST["direccion"])? limpiarCadena($_POST["direccion"]):"";
+$acliente = isset($_POST["acliente"])? limpiarCadena($_POST["acliente"]):"";
+$ncliente = isset($_POST["ncliente"])? limpiarCadena($_POST["ncliente"]):"";
+$ccliente = isset($_POST["ccliente"])? limpiarCadena($_POST["ccliente"]):"";
+$tcliente = isset($_POST["tcliente"])? limpiarCadena($_POST["tcliente"]):"";
+$logincliente = isset($_POST["logincliente"])? limpiarCadena($_POST["logincliente"]):"";
+$iddrive = isset($_POST["iddrive"])? limpiarCadena($_POST["iddrive"]):"";
+$contrasenacliente = isset($_POST["contrasenacliente"])? limpiarCadena($_POST["contrasenacliente"]):"";
+
+
+switch ($_GET["op"]) {
+	case 'guardaryeditar':
+		
+		$contrasenaclientehash=hash("SHA256", $contrasenacliente);
+
+		if(empty($idcliente)):
+			$idusuario = $_SESSION["idusuario"];
+			$rspta = $cliente->insertarcliente($ruc,$razonsocial,$direccion,$acliente,$ncliente,$ccliente,$tcliente,$logincliente,$contrasenaclientehash,$iddrive);
+			//echo var_dump($_SESSION);
+			//echo $ruc.$razonsocial.$direccion.$acliente.$ncliente.$ccliente.$tcliente.$logincliente.$contrasenaclientehash;
+			echo $rspta ? "Datos registrado correctamente" : "Los Datos no se puderon registrar";
+			
+		else:
+			$rspta = $cliente->editarcliente($idcliente,$ruc,$razonsocial,$direccion,$acliente,$ncliente,$ccliente,$tcliente,$logincliente,$contrasenaclientehash,$iddrive);
+			echo $rspta ? "Datos actualizados correctamente" : "No se pudo actualizar los datos correctamente";
+		endif;
+	break;
+	
+	case 'desactivar':
+		$rspta = $cliente -> desactivarcliente($idcliente);
+		echo $rspta	? "Cliente desactivado" : "No se pudo desactivar al cliente";
+	break;
+
+	case 'activar':
+		$rspta = $cliente -> activarcliente($idcliente);
+		echo $rspta ? "Cliente activado" : "No se pudo activar a cliente";
+	break;
+
+	case 'mostrar':
+		$rspta = $cliente -> mostrarcliente($idcliente);
+		echo json_encode($rspta);
+	break;
+
+	case 'editar_clave':
+		$contrasenaclientehash = hash("SHA256", $clavec);
+
+		$rspta=$cliente->editar_clavecliente($idclientec,$contrasenaclientehash);
+		echo $rspta ? "Password actualizado correctamente" : "No se pudo actualizar el password";
+	break;
+
+	case 'mostrar_clave':
+		$rspta = $cliente -> mostrar_clavecliente($idcliente);
+		echo json_encode($rspta);
+	break;
+
+	case 'listar':
+		$rspta = $cliente -> listarcliente();
+		$data = Array();
+
+
+
+		while($reg=$rspta->fetch_object()){
+			$data[]=array(
+				"0"=>($reg->estado)?'<button class="btn btn-warning btn-xs" onclick="mostrar('.$reg->idcliente.')"><i class="fa fa-pencil"></i></button>'.' '.'<button class="btn btn-info btn-xs" onclick="mostrar_clave('.$reg->idcliente.')"><i class="fa fa-key"></i></button>'.' '.'<button class="btn btn-danger btn-xs" onclick="desactivar('.$reg->idcliente.')"><i class="fa fa-close"></i></button>':'<button class="btn btn-warning btn-xs" onclick="mostrar('.$reg->idcliente.')"><i class="fa fa-pencil"></i></button>'.' '.'<button class="btn btn-info btn-xs" onclick="mostrar_clave('.$reg->idcliente.')"><i class="fa fa-key"></i></button>'.' '.'<button class="btn btn-primary btn-xs" onclick="activar('.$reg->idcliente.')"><i class="fa fa-check"></i></button>',
+				"1"=>$reg->ruc,
+				"2"=>$reg->razonsocial,
+				"3"=>$reg->direccion,
+				"4"=>$reg->acliente,
+				"5"=>$reg->ncliente,
+				"6"=>$reg->ccliente,
+				"7"=>$reg->tcliente,
+				"8"=>$reg->fechacreado,
+				"9"=>($reg->estado)?'<span class="label bg-green">Activado</span>':'<span class="label bg-red">Desactivado</span>'
+			);
+		}
+
+		$result = array(
+			 "sEcho"=>1,//info para datatables
+             "iTotalRecords"=>count($data),//enviamos el total de registros al datatable
+             "iTotalDisplayRecords"=>count($data),//enviamos el total de registros a visualizar
+             "aaData"=>$data
+		);
+
+		echo json_encode($result);
+
+	break;
+
+	case 'verificar':
+
+		$loginaclientes = $_POST['loginaclientes'];
+		$claveaclientes = $_POST['claveaclientes'];
+
+		$contrasenaclientehash = hash("SHA256", $claveaclientes);
+
+		$rspta = $cliente->verificarclientes($loginaclientes,$contrasenaclientehash);
+
+		$fetch = $rspta->fetch_object();
+
+		if(isset($fetch)):
+			$_SESSION['idcliente']=$fetch->idcliente;
+			$id=$fetch->idcliente;
+			$_SESSION['ruc']=$fetch->ruc;
+			$_SESSION['razonsocial']=$fetch->razonsocial;
+			$_SESSION['direccion']=$fetch->direccion;
+			$_SESSION['acliente']=$fetch->acliente;
+			$_SESSION['ncliente']=$fetch->ncliente;
+			$_SESSION['ccliente']=$fetch->ccliente;
+			$_SESSION['tcliente']=$fetch->tcliente;
+			$_SESSION['logincliente']=$fetch->logincliente;
+			$_SESSION['iddrive']=$fetch->iddrive;
+
+			require "../config/Conexion.php";
+
+			$sql="UPDATE cliente SET iteracion='1' WHERE idcliente = '$id'";
+			echo $sql;
+			ejecutrarConsulta($sql);
+
+		endif;
+
+		echo json_encode($fetch);
+
+	break;
+
+	case 'salir':
+			
+			$id=$_SESSION['idcliente'];
+			$sql="UPDATE cliente SET iteracion='0' WHERE idcliente='$id'";
+	 		ejecutarConsulta($sql);	 		
+
+
+		//Limpiamos las variables de sesión   
+        session_unset();
+        //Destruìmos la sesión
+        session_destroy();
+        //Redireccionamos al login
+        header("Location: ../index.php");
+
+	break;
+
+}
+
+
+
+
+ ?>
